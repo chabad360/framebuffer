@@ -1,3 +1,3 @@
-module github.com/gonutz/framebuffer
+module github.com/chabad360/framebuffer
 
 go 1.11
