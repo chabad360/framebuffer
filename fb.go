@@ -56,7 +56,7 @@ func Open(device string) (*Device, error) {
 	if varInfo.red.offset == 11 && varInfo.red.length == 5 && varInfo.red.msb_right == 0 &&
 		varInfo.green.offset == 5 && varInfo.green.length == 6 && varInfo.green.msb_right == 0 &&
 		varInfo.blue.offset == 0 && varInfo.blue.length == 5 && varInfo.blue.msb_right == 0 {
-		colorModel = rgb565ColorModel{}
+		colorModel = RGB565(0)
 	} else {
 		return nil, errors.New("unsupported color model")
 	}
@@ -100,10 +100,10 @@ func (d *Device) ColorModel() color.Model {
 func (d *Device) At(x, y int) color.Color {
 	if x < d.bounds.Min.X || x >= d.bounds.Max.X ||
 		y < d.bounds.Min.Y || y >= d.bounds.Max.Y {
-		return rgb565(0)
+		return RGB565(0)
 	}
 	i := y*d.pitch + 2*x
-	return rgb565(d.pixels[i+1])<<8 | rgb565(d.pixels[i])
+	return RGB565(d.pixels[i+1])<<8 | RGB565(d.pixels[i])
 }
 
 // Set implements the draw.Image interface.
@@ -124,6 +124,17 @@ func (d *Device) Set(x, y int, c color.Color) {
 	}
 }
 
+// toRGB565 helps convert a color.Color to rgb565. In a color.Color each
+// channel is represented by the lower 16 bits in a uint32 so the maximum value
+// is 0xFFFF. This function simply uses the highest 5 or 6 bits of each channel
+// as the RGB values.
+func toRGB565(r, g, b uint32) RGB565 {
+	// RRRRRGGGGGGBBBBB
+	return rgb565((r & 0xF800) +
+		((g & 0xFC00) >> 5) +
+		((b & 0xF800) >> 11))
+}
+
 // The default color model under the Raspberry Pi is RGB 565. Each pixel is
 // represented by two bytes, with 5 bits for red, 6 bits for green and 5 bits
 // for blue. There is no alpha channel, so alpha is assumed to always be 100%
@@ -133,32 +144,19 @@ func (d *Device) Set(x, y int, c color.Color) {
 //    bit 76543210  76543210
 //        RRRRRGGG  GGGBBBBB
 //       high byte  low byte
-type rgb565ColorModel struct{}
+// RGB565 implements the color.Color and color.Model interfaces.
+type RGB565 uint16
 
-func (rgb565ColorModel) Convert(c color.Color) color.Color {
+func (RGB565) Convert(c color.Color) color.Color {
 	r, g, b, _ := c.RGBA()
 	return toRGB565(r, g, b)
 }
 
-// toRGB565 helps convert a color.Color to rgb565. In a color.Color each
-// channel is represented by the lower 16 bits in a uint32 so the maximum value
-// is 0xFFFF. This function simply uses the highest 5 or 6 bits of each channel
-// as the RGB values.
-func toRGB565(r, g, b uint32) rgb565 {
-	// RRRRRGGGGGGBBBBB
-	return rgb565((r & 0xF800) +
-		((g & 0xFC00) >> 5) +
-		((b & 0xF800) >> 11))
-}
-
-// rgb565 implements the color.Color interface.
-type rgb565 uint16
-
 // RGBA implements the color.Color interface.
-func (c rgb565) RGBA() (r, g, b, a uint32) {
+func (c RGB565) RGBA() (r, g, b, a uint32) {
 	// To convert a color channel from 5 or 6 bits back to 16 bits, the short
 	// bit pattern is duplicated to fill all 16 bits.
-	// For example the green channel in rgb565 is the middle 6 bits:
+	// For example the green channel in RGB565 is the middle 6 bits:
 	//     00000GGGGGG00000
 	//
 	// To create a 16 bit channel, these bits are or-ed together starting at the
