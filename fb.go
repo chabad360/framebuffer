@@ -102,7 +102,7 @@ func (d *Device) At(x, y int) color.Color {
 		y < d.bounds.Min.Y || y >= d.bounds.Max.Y {
 		return RGB565(0)
 	}
-	i := y*d.pitch + 2*x
+	i := y*d.Pitch + 2*x
 	return RGB565(d.Pixels[i+1])<<8 | RGB565(d.Pixels[i])
 }
 
@@ -130,7 +130,7 @@ func (d *Device) Set(x, y int, c color.Color) {
 // as the RGB values.
 func toRGB565(r, g, b uint32) RGB565 {
 	// RRRRRGGGGGGBBBBB
-	return rgb565((r & 0xF800) +
+	return RGB565((r & 0xF800) +
 		((g & 0xFC00) >> 5) +
 		((b & 0xF800) >> 11))
 }
