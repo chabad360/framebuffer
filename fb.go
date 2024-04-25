@@ -72,9 +72,9 @@ func Open(device string) (*Device, error) {
 
 // Device represents the frame buffer. It implements the draw.Image interface.
 type Device struct {
-	file       *os.File
-	pixels     []byte
-	pitch      int
+	File       *os.File
+	Pixels     []byte
+	Pitch      int
 	bounds     image.Rectangle
 	colorModel color.Model
 }
@@ -82,8 +82,8 @@ type Device struct {
 // Close unmaps the framebuffer memory and closes the device file. Call this
 // function when you are done using the frame buffer.
 func (d *Device) Close() {
-	syscall.Munmap(d.pixels)
-	d.file.Close()
+	syscall.Munmap(d.Pixels)
+	d.File.Close()
 }
 
 // Bounds implements the image.Image (and draw.Image) interface.
@@ -103,7 +103,7 @@ func (d *Device) At(x, y int) color.Color {
 		return RGB565(0)
 	}
 	i := y*d.pitch + 2*x
-	return RGB565(d.pixels[i+1])<<8 | RGB565(d.pixels[i])
+	return RGB565(d.Pixels[i+1])<<8 | RGB565(d.Pixels[i])
 }
 
 // Set implements the draw.Image interface.
@@ -114,12 +114,12 @@ func (d *Device) Set(x, y int, c color.Color) {
 		r, g, b, a := c.RGBA()
 		if a > 0 {
 			rgb := toRGB565(r, g, b)
-			i := y*d.pitch + 2*x
+			i := y*d.Pitch + 2*x
 			// This assumes a little endian system which is the default for
 			// Raspbian. The d.pixels indices have to be swapped if the target
 			// system is big endian.
-			d.pixels[i+1] = byte(rgb >> 8)
-			d.pixels[i] = byte(rgb & 0xFF)
+			d.Pixels[i+1] = byte(rgb >> 8)
+			d.Pixels[i] = byte(rgb & 0xFF)
 		}
 	}
 }
