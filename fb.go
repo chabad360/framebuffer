@@ -44,7 +44,7 @@ func Open(device string) (*Device, error) {
 
 	pixels, err := syscall.Mmap(
 		int(file.Fd()),
-		0, int(varInfo.smem_len),
+		0, int(fixInfo.smem_len),
 		syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED,
 	)
 	if err != nil {
@@ -78,7 +78,7 @@ type Device struct {
 	Pitch      int
 	bounds     image.Rectangle
 	colorModel color.Model
-	dirty	  image.Rectangle
+	dirty      image.Rectangle
 }
 
 // Close unmaps the framebuffer memory and closes the device file. Call this
@@ -156,9 +156,10 @@ func toRGB565(r, g, b uint32) RGB565 {
 // opaque.
 // This shows the memory layout of a pixel:
 //
-//    bit 76543210  76543210
-//        RRRRRGGG  GGGBBBBB
-//       high byte  low byte
+//	bit 76543210  76543210
+//	    RRRRRGGG  GGGBBBBB
+//	   high byte  low byte
+//
 // RGB565 implements the color.Color and color.Model interfaces.
 type RGB565 uint16
 
