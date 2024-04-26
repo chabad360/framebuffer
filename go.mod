@@ -1,3 +1,3 @@
 module github.com/chabad360/framebuffer
 
-go 1.11
+go 1.22
