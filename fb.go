@@ -44,7 +44,7 @@ func Open(device string) (*Device, error) {
 
 	pixels, err := syscall.Mmap(
 		int(file.Fd()),
-		0, int(varInfo.xres*varInfo.yres*varInfo.bits_per_pixel/8),
+		0, int(varInfo.smem_len),
 		syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED,
 	)
 	if err != nil {
@@ -67,6 +67,7 @@ func Open(device string) (*Device, error) {
 		int(fixInfo.line_length),
 		image.Rect(0, 0, int(varInfo.xres), int(varInfo.yres)),
 		colorModel,
+		image.Rect(0, 0, 0, 0),
 	}, nil
 }
 
@@ -77,6 +78,7 @@ type Device struct {
 	Pitch      int
 	bounds     image.Rectangle
 	colorModel color.Model
+	dirty	  image.Rectangle
 }
 
 // Close unmaps the framebuffer memory and closes the device file. Call this
@@ -115,6 +117,9 @@ func (d *Device) Set(x, y int, c color.Color) {
 		if a > 0 {
 			rgb := toRGB565(r, g, b)
 			i := y*d.Pitch + 2*x
+			if d.Pixels[i] != byte(rgb&0xFF) || d.Pixels[i+1] != byte(rgb>>8) {
+				d.dirty = d.dirty.Union(image.Rect(x, y, x+1, y+1))
+			}
 			// This assumes a little endian system which is the default for
 			// Raspbian. The d.pixels indices have to be swapped if the target
 			// system is big endian.
@@ -122,6 +127,16 @@ func (d *Device) Set(x, y int, c color.Color) {
 			d.Pixels[i] = byte(rgb & 0xFF)
 		}
 	}
+}
+
+// Dirty returns the rectangle that has been modified since the last call to Set.
+func (d *Device) Dirty() image.Rectangle {
+	return d.dirty
+}
+
+// ResetDirty resets the dirty rectangle to an empty rectangle.
+func (d *Device) ResetDirty() {
+	d.dirty = image.Rect(0, 0, 0, 0)
 }
 
 // toRGB565 helps convert a color.Color to rgb565. In a color.Color each
